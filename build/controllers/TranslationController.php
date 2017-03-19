@@ -47,7 +47,7 @@ class TranslationController extends Controller
 
                 $errors = $this->checkFiles($translatedFilePath);
                 $diff = empty($errors) ? $this->getDiff($translatedFilePath, $sourceFilePath) : '';
-                if(!empty($diff)) {
+                if (!empty($diff)) {
                     $errors[] = 'Translation outdated.';
                 }
 
@@ -68,7 +68,7 @@ class TranslationController extends Controller
                 $translatedFilePath = $translationPath . '/' . $fileinfo->getFilename();
 
                 $errors = $this->checkFiles(null, $translatedFilePath);
-                if(!empty($errors)) {
+                if (!empty($errors)) {
                     $results[$fileinfo->getFilename()]['errors'] = $errors;
                 }
             }
@@ -128,14 +128,11 @@ class TranslationController extends Controller
         foreach ($lines as $key => $val) {
             if (mb_substr($val, 0, 1, 'utf-8') === '@') {
                 $lines[$key] = '<span class="info">' . Html::encode($val) . '</span>';
-            }
-            else if (mb_substr($val, 0, 1, 'utf-8') === '+') {
+            } elseif (mb_substr($val, 0, 1, 'utf-8') === '+') {
                 $lines[$key] = '<ins>' . Html::encode($val) . '</ins>';
-            }
-            else if (mb_substr($val, 0, 1, 'utf-8') === '-') {
+            } elseif (mb_substr($val, 0, 1, 'utf-8') === '-') {
                 $lines[$key] = '<del>' . Html::encode($val) . '</del>';
-            }
-            else {
+            } else {
                 $lines[$key] = Html::encode($val);
             }
         }

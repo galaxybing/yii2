@@ -12,7 +12,6 @@
 ```php
 namespace app\components;
 
-use yii\base\Model;
 use yii\base\Behavior;
 
 class MyBehavior extends Behavior
@@ -40,7 +39,7 @@ class MyBehavior extends Behavior
 
 以上代码定义了行为类 `app\components\MyBehavior` 并为要附加行为的组件提供了两个属性 `prop1` 、 `prop2` 和一个方法 `foo()` 。注意属性 `prop2` 是通过 getter `getProp2()` 和 setter `setProp2()` 定义的。能这样用是因为 [[yii\base\Object]] 是 [[yii\base\Behavior]] 的祖先类，此祖先类支持用 getter 和 setter 方法定义[属性](basic-properties.md)
 
-> 提示：在行为内部可以通过 [[yii\base\Behavior::owner]] 属性访问行为已附加的组件。
+> Tip: 在行为内部可以通过 [[yii\base\Behavior::owner]] 属性访问行为已附加的组件。
 
 
 处理事件
@@ -188,14 +187,14 @@ echo $component->prop1;
 $component->prop1 = $value;
 ```
 
-类似地也可以调用行为的**公共*方法：
+类似地也可以调用行为的**公共**方法：
 
 ```php
-// bar() 是定义在行为类的公共方法
-$component->bar();
+// foo() 是定义在行为类的公共方法
+$component->foo();
 ```
 
-如你所见，尽管 `$component` 未定义 `prop1` 和 `bar()` ，它们用起来也像组件自己定义的一样。
+如你所见，尽管 `$component` 未定义 `prop1` 和 `foo()` ，它们用起来也像组件自己定义的一样。
 
 如果两个行为都定义了一样的属性或方法，并且它们都附加到同一个组件，那么**首先**附加上的行为在属性或方法被访问时有优先权。
 
@@ -268,7 +267,7 @@ class User extends ActiveRecord
 
 保存 `User` 对象，将会发现它的 `created_at` 和 `updated_at` 属性自动填充了当前时间戳：
 
-``php
+```php
 $user = new User;
 $user->email = 'test@example.com';
 $user->save();

@@ -19,7 +19,7 @@ use yii\base\InvalidConfigException;
  * This validator is often used to verify that a foreign key contains a value
  * that can be found in the foreign table.
  *
- * The followings are examples of validation rules using this validator:
+ * The following are examples of validation rules using this validator:
  *
  * ```php
  * // a1 needs to exist
@@ -41,7 +41,7 @@ class ExistValidator extends Validator
 {
     /**
      * @var string the name of the ActiveRecord class that should be used to validate the existence
-     * of the current attribute value. It not set, it will use the ActiveRecord class of the attribute being validated.
+     * of the current attribute value. If not set, it will use the ActiveRecord class of the attribute being validated.
      * @see targetAttribute
      */
     public $targetClass;
@@ -49,9 +49,8 @@ class ExistValidator extends Validator
      * @var string|array the name of the ActiveRecord attribute that should be used to
      * validate the existence of the current attribute value. If not set, it will use the name
      * of the attribute currently being validated. You may use an array to validate the existence
-     * of multiple columns at the same time. The array values are the attributes that will be
-     * used to validate the existence, while the array keys are the attributes whose values are to be validated.
-     * If the key and the value are the same, you can just specify the value.
+     * of multiple columns at the same time. The array key is the name of the attribute with the value to validate,
+     * the array value is the name of the database field to search.
      */
     public $targetAttribute;
     /**
@@ -62,9 +61,14 @@ class ExistValidator extends Validator
      */
     public $filter;
     /**
-     * @var boolean whether to allow array type attribute.
+     * @var bool whether to allow array type attribute.
      */
     public $allowArray = false;
+    /**
+     * @var string and|or define how target attributes are related
+     * @since 2.0.11
+     */
+    public $targetAttributeJunction = 'and';
 
 
     /**
@@ -81,42 +85,66 @@ class ExistValidator extends Validator
     /**
      * @inheritdoc
      */
-    public function validateAttribute($object, $attribute)
+    public function validateAttribute($model, $attribute)
     {
         $targetAttribute = $this->targetAttribute === null ? $attribute : $this->targetAttribute;
+        $params = $this->prepareConditions($targetAttribute, $model, $attribute);
+        $conditions[] = $this->targetAttributeJunction == 'or' ? 'or' : 'and';
 
+        if (!$this->allowArray) {
+            foreach ($params as $key => $value) {
+                if (is_array($value)) {
+                    $this->addError($model, $attribute, Yii::t('yii', '{attribute} is invalid.'));
+
+                    return;
+                }
+                $conditions[] = [$key => $value];
+            }
+        } else {
+            $conditions[] = $params;
+        }
+
+        $targetClass = $this->targetClass === null ? get_class($model) : $this->targetClass;
+        $query = $this->createQuery($targetClass, $conditions);
+
+        if (is_array($model->$attribute)) {
+            if ($query->count("DISTINCT [[$targetAttribute]]") != count($model->$attribute)) {
+                $this->addError($model, $attribute, $this->message);
+            }
+        } elseif (!$query->exists()) {
+            $this->addError($model, $attribute, $this->message);
+        }
+    }
+
+    /**
+     * Processes attributes' relations described in $targetAttribute parameter into conditions, compatible with
+     * [[\yii\db\Query::where()|Query::where()]] key-value format.
+     *
+     * @param $targetAttribute array|string $attribute the name of the ActiveRecord attribute that should be used to
+     * validate the existence of the current attribute value. If not set, it will use the name
+     * of the attribute currently being validated. You may use an array to validate the existence
+     * of multiple columns at the same time. The array key is the name of the attribute with the value to validate,
+     * the array value is the name of the database field to search.
+     * If the key and the value are the same, you can just specify the value.
+     * @param \yii\base\Model $model the data model to be validated
+     * @param string $attribute the name of the attribute to be validated in the $model
+     * @return array conditions, compatible with [[\yii\db\Query::where()|Query::where()]] key-value format.
+     * @throws InvalidConfigException
+     */
+    private function prepareConditions($targetAttribute, $model, $attribute)
+    {
         if (is_array($targetAttribute)) {
             if ($this->allowArray) {
                 throw new InvalidConfigException('The "targetAttribute" property must be configured as a string.');
             }
             $params = [];
             foreach ($targetAttribute as $k => $v) {
-                $params[$v] = is_integer($k) ? $object->$v : $object->$k;
+                $params[$v] = is_int($k) ? $model->$v : $model->$k;
             }
         } else {
-            $params = [$targetAttribute => $object->$attribute];
+            $params = [$targetAttribute => $model->$attribute];
         }
-
-        if (!$this->allowArray) {
-            foreach ($params as $value) {
-                if (is_array($value)) {
-                    $this->addError($object, $attribute, Yii::t('yii', '{attribute} is invalid.'));
-
-                    return;
-                }
-            }
-        }
-
-        $targetClass = $this->targetClass === null ? get_class($object) : $this->targetClass;
-        $query = $this->createQuery($targetClass, $params);
-
-        if (is_array($object->$attribute)) {
-            if ($query->count("DISTINCT [[$targetAttribute]]") != count($object->$attribute)) {
-                $this->addError($object, $attribute, $this->message);
-            }
-        } elseif (!$query->exists()) {
-            $this->addError($object, $attribute, $this->message);
-        }
+        return $params;
     }
 
     /**
@@ -152,7 +180,7 @@ class ExistValidator extends Validator
     protected function createQuery($targetClass, $condition)
     {
         /* @var $targetClass \yii\db\ActiveRecordInterface */
-        $query = $targetClass::find()->where($condition);
+        $query = $targetClass::find()->andWhere($condition);
         if ($this->filter instanceof \Closure) {
             call_user_func($this->filter, $query);
         } elseif ($this->filter !== null) {

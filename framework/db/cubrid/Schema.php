@@ -13,7 +13,7 @@ use yii\db\ColumnSchema;
 use yii\db\Transaction;
 
 /**
- * Schema is the class for retrieving metadata from a CUBRID database (version 9.1.x and higher).
+ * Schema is the class for retrieving metadata from a CUBRID database (version 9.3.x and higher).
  *
  * @author Carsten Brandt <mail@cebe.cc>
  * @since 2.0
@@ -36,8 +36,8 @@ class Schema extends \yii\db\Schema
         'decimal' => self::TYPE_DECIMAL,
         'float' => self::TYPE_FLOAT,
         'real' => self::TYPE_FLOAT,
-        'double' => self::TYPE_FLOAT,
-        'double precision' => self::TYPE_FLOAT,
+        'double' => self::TYPE_DOUBLE,
+        'double precision' => self::TYPE_DOUBLE,
         'monetary' => self::TYPE_MONEY,
         // Date/Time data types
         'date' => self::TYPE_DATE,
@@ -45,10 +45,10 @@ class Schema extends \yii\db\Schema
         'timestamp' => self::TYPE_TIMESTAMP,
         'datetime' => self::TYPE_DATETIME,
         // String data types
-        'char' => self::TYPE_STRING,
+        'char' => self::TYPE_CHAR,
         'varchar' => self::TYPE_STRING,
         'char varying' => self::TYPE_STRING,
-        'nchar' => self::TYPE_STRING,
+        'nchar' => self::TYPE_CHAR,
         'nchar varying' => self::TYPE_STRING,
         'string' => self::TYPE_STRING,
         // BLOB/CLOB data types
@@ -104,30 +104,6 @@ class Schema extends \yii\db\Schema
     }
 
     /**
-     * Quotes a string value for use in a query.
-     * Note that if the parameter is not a string, it will be returned without change.
-     * @param string $str string to be quoted
-     * @return string the properly quoted string
-     * @see http://www.php.net/manual/en/function.PDO-quote.php
-     */
-    public function quoteValue($str)
-    {
-        if (!is_string($str)) {
-            return $str;
-        }
-
-        $pdo = $this->db->getSlavePdo();
-
-        // workaround for broken PDO::quote() implementation in CUBRID 9.1.0 http://jira.cubrid.org/browse/APIS-658
-        $version = $pdo->getAttribute(\PDO::ATTR_CLIENT_VERSION);
-        if (version_compare($version, '8.4.4.0002', '<') || $version[0] == '9' && version_compare($version, '9.2.0.0002', '<=')) {
-            return "'" . addcslashes(str_replace("'", "''", $str), "\000\n\r\\\032") . "'";
-        } else {
-            return $pdo->quote($str);
-        }
-    }
-
-    /**
      * Creates a query builder for the CUBRID database.
      * @return QueryBuilder query builder instance
      */
@@ -179,11 +155,10 @@ class Schema extends \yii\db\Schema
             } else {
                 $table->foreignKeys[$key['FK_NAME']] = [
                     $key['PKTABLE_NAME'],
-                    $key['FKCOLUMN_NAME'] => $key['PKCOLUMN_NAME']
+                    $key['FKCOLUMN_NAME'] => $key['PKCOLUMN_NAME'],
                 ];
             }
         }
-        $table->foreignKeys = array_values($table->foreignKeys);
 
         return $table;
     }
@@ -251,7 +226,7 @@ class Schema extends \yii\db\Schema
         ) {
             $column->defaultValue = new Expression($info['Default']);
         } elseif (isset($type) && $type === 'bit') {
-            $column->defaultValue = hexdec(trim($info['Default'],'X\''));
+            $column->defaultValue = hexdec(trim($info['Default'], 'X\''));
         } else {
             $column->defaultValue = $column->phpTypecast($info['Default']);
         }
@@ -267,7 +242,7 @@ class Schema extends \yii\db\Schema
     protected function findTableNames($schema = '')
     {
         $pdo = $this->db->getSlavePdo();
-        $tables =$pdo->cubrid_schema(\PDO::CUBRID_SCH_TABLE);
+        $tables = $pdo->cubrid_schema(\PDO::CUBRID_SCH_TABLE);
         $tableNames = [];
         foreach ($tables as $table) {
             // do not list system tables
@@ -282,7 +257,7 @@ class Schema extends \yii\db\Schema
     /**
      * Determines the PDO type for the given PHP data value.
      * @param mixed $data the data whose PDO type is to be determined
-     * @return integer the PDO type
+     * @return int the PDO type
      * @see http://www.php.net/manual/en/pdo.constants.php
      */
     public function getPdoType($data)
@@ -322,5 +297,13 @@ class Schema extends \yii\db\Schema
                 break;
         }
         parent::setTransactionIsolationLevel($level);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function createColumnSchemaBuilder($type, $length = null)
+    {
+        return new ColumnSchemaBuilder($type, $length, $this->db);
     }
 }

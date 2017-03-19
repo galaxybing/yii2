@@ -1,7 +1,7 @@
 属性（Property）
 ==========
 
-在 PHP 中，类的成员变量也被称为**属性（properties）**。它们是类定义的一部分，用来表现一个实例的状态（也就是区分类的不同实例）。在具体实践中，常常会想用一个稍微特殊些的方法实现属性的读写。例如，要对 `label` 属性执行 trim 操作，可以用以下代码实现：
+在 PHP 中，类的成员变量也被称为**属性（properties）**。它们是类定义的一部分，用来表现一个实例的状态（也就是区分类的不同实例）。在具体实践中，常常会想用一个稍微特殊些的方法实现属性的读写。例如，如果有需求每次都要对 `label` 属性执行 trim 操作，就可以用以下代码实现：
 
 ```php
 $object->label = trim($label);
@@ -11,7 +11,7 @@ $object->label = trim($label);
 
 为解决该问题，Yii 引入了一个名为 [[yii\base\Object]] 的基类，它支持基于类内的 **getter** 和 **setter**（读取器和设定器）方法来定义属性。如果某类需要支持这个特性，只需要继承 [[yii\base\Object]] 或其子类即可。
 
-> 补充：几乎每个 Yii 框架的核心类都继承自 [[yii\base\Object]] 或其子类。这意味着只要在核心类中见到 getter 或 setter 方法，就可以像调用属性一样调用它。
+> Info: 几乎每个 Yii 框架的核心类都继承自 [[yii\base\Object]] 或其子类。这意味着只要在核心类中见到 getter 或 setter 方法，就可以像调用属性一样调用它。
 
 getter 方法是名称以 `get` 开头的方法，而 setter 方法名以 `set` 开头。方法名中 `get` 或 `set` 后面的部分就定义了该属性的名字。如下面代码所示，getter 方法 `getLabel()` 和 setter 方法 `setLabel()` 操作的是 `label` 属性，：
 
